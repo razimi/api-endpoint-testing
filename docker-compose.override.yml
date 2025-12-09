@@ -1,0 +1,10 @@
+services:
+  attendance-api:
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=true
+    ports:
+      - "5001:5000"  # Map to 5001 for development
+    volumes:
+      - .:/app  # Mount entire project for hot reload
+    command: ["python", "app.py"]

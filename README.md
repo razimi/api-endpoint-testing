@@ -355,7 +355,10 @@ HTTP 400 Bad Request
 #### React Native/Expo
 
 ```javascript
+// Development
 const API_BASE = 'http://localhost:5001/api/v1';
+// Production
+// const API_BASE = 'https://api.mypisang.info/api/v1';
 
 // Login
 const login = async (email, password) => {
@@ -387,7 +390,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class AttendanceApi {
+  // Development
   static const String baseUrl = 'http://localhost:5001/api/v1';
+  // Production
+  // static const String baseUrl = 'https://api.mypisang.info/api/v1';
   
   static Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
@@ -415,3 +421,151 @@ class AttendanceApi {
 - **Network Handling**: Handle offline scenarios gracefully
 - **SSL Pinning**: Consider certificate pinning for production
 - **Error Handling**: Implement proper error handling for network failures
+
+## Docker Deployment
+
+### Quick Start with Docker Compose
+
+#### Development Mode
+```bash
+# Start the application in development mode
+docker-compose up -d
+
+# View logs
+docker-compose logs -f attendance-api
+
+# Stop the application
+docker-compose down
+```
+
+#### Production Mode (Behind External Proxy)
+```bash
+# Start the Flask app container (without built-in nginx)
+docker-compose up -d
+
+# The Flask API will be available at:
+# - Container port: http://localhost:5000
+# - Through external proxy: https://api.mypisang.info
+```
+
+### Available Docker Commands
+
+```bash
+# Build and start services
+docker-compose up --build -d
+
+# View all service logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f attendance-api
+
+# Scale the application (multiple instances behind proxy)
+docker-compose up -d --scale attendance-api=3
+# Note: Configure external nginx with multiple upstream servers for load balancing
+
+# Execute commands inside container
+docker-compose exec attendance-api python -c "from app.data import USERS; print(len(USERS))"
+
+# Stop all services
+docker-compose down
+
+# Remove all containers and networks
+docker-compose down --volumes --remove-orphans
+```
+
+### Environment Configuration
+
+Create a `.env` file for custom configuration:
+
+```env
+# Flask Configuration
+FLASK_ENV=production
+FLASK_DEBUG=false
+PORT=5000
+HOST=0.0.0.0
+
+# Security
+SECRET_KEY=your-super-secret-key-here
+
+# Custom allowed origins for CORS (production)
+ALLOWED_ORIGINS=https://api.mypisang.info,https://mypisang.info,https://www.mypisang.info
+```
+
+### Production Deployment Checklist
+
+1. **Environment Variables**
+   ```bash
+   export FLASK_ENV=production
+   export FLASK_DEBUG=false
+   ```
+
+2. **SSL Certificates** (for HTTPS)
+   - Place certificates in `./ssl/` directory
+   - Update `nginx.conf` with your domain
+   - Uncomment HTTPS server block in `nginx.conf`
+
+3. **Domain Configuration**
+   - Domain: `api.mypisang.info` (already configured)
+   - Configure DNS A record to point to your server IP
+   - SSL certificates should be placed in `./ssl/cert.pem` and `./ssl/key.pem`
+
+4. **Security Hardening**
+   - Change default secret key
+   - Enable firewall rules
+   - Regular security updates
+   - Monitor logs
+
+### Container Specifications
+
+- **Base Image**: Python 3.11 slim
+- **Port**: 5000 (internal), 5001 (external)
+- **Health Check**: Automatic API health monitoring
+- **Restart Policy**: Unless stopped manually
+- **Network**: Isolated bridge network
+- **Volume**: Optional app directory mounting for development
+- **Proxy Ready**: Configured to work behind external nginx proxy
+
+## External Nginx Proxy Configuration
+
+This container is designed to run behind an external nginx proxy. Use the provided `nginx-proxy.conf` configuration:
+
+### Setup External Nginx
+
+1. **Copy proxy configuration**:
+   ```bash
+   sudo cp nginx-proxy.conf /etc/nginx/sites-available/api.mypisang.info
+   sudo ln -s /etc/nginx/sites-available/api.mypisang.info /etc/nginx/sites-enabled/
+   ```
+
+2. **Update SSL certificate paths in the config**:
+   ```bash
+   sudo nano /etc/nginx/sites-available/api.mypisang.info
+   # Update ssl_certificate and ssl_certificate_key paths
+   ```
+
+3. **Test and reload nginx**:
+   ```bash
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+### Proxy Benefits
+- ✅ **SSL Termination** handled by external nginx
+- ✅ **Load Balancing** across multiple container instances
+- ✅ **Rate Limiting** and security headers
+- ✅ **Static File Serving** (if needed)
+- ✅ **Centralized Logging** and monitoring
+
+### Monitoring and Logging
+
+```bash
+# Monitor resource usage
+docker stats attendance-api
+
+# View health check status
+docker inspect --format='{{.State.Health.Status}}' attendance-api
+
+# Export logs
+docker-compose logs attendance-api > app.log 2>&1
+```

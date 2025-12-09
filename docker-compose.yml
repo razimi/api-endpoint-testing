@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  attendance-api:
+    build: .
+    container_name: attendance-api
+    ports:
+      - "5001:5000"  # Expose on port 5000 for proxy nginx
+    environment:
+      - FLASK_ENV=production
+      - FLASK_DEBUG=false
+      - BEHIND_PROXY=true
+    volumes:
+      - ./app:/app/app:ro  # Mount app directory as read-only for development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/v1/auth/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - attendance-network
+
+networks:
+  attendance-network:
+    driver: bridge
+
+volumes:
+  app_data:
+    driver: local

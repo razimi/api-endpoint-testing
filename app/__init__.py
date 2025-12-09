@@ -13,9 +13,11 @@ def create_app():
         'http://127.0.0.1:3000',
         'http://127.0.0.1:8080',
         'http://127.0.0.1:4200',
-        # Add your production domains here:
-        # 'https://yourapp.com',
-        # 'https://www.yourapp.com'
+        # Production domains
+        'https://api.mypisang.info',
+        'https://mypisang.info',
+        'https://www.mypisang.info',
+        'http://api.mypisang.info',  # For development/testing
     ]
     
     # Add CORS headers to all responses (for web apps only - mobile apps don't need CORS)
